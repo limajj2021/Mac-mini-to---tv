@@ -44,7 +44,12 @@ const app = express();
 app.use(express.static(path.join(__dirname, 'public')));
 
 app.get('/api/ip', (_req, res) => {
-  res.json({ ip: getLocalIP(), port: PORT });
+  const localIP  = getLocalIP();
+  const tunnelUrl = (process.env.TUNNEL_URL || '').replace(/\/$/, '') || null;
+  const remoteUrl = tunnelUrl
+    ? `${tunnelUrl}/remote.html`
+    : `http://${localIP}:${PORT}/remote.html`;
+  res.json({ ip: localIP, port: PORT, tunnelUrl, remoteUrl });
 });
 
 const server = http.createServer(app);
@@ -134,11 +139,18 @@ function handlePhoneMsg(_ws, msg) {
       sendTo(tvClient, { type: 'back' });
       closeApp();
       break;
+
+    case 'ping':
+      break; // keep-alive for Cloudflare Tunnel idle timeout
   }
 }
 
 server.listen(PORT, () => {
-  console.log(`TV Launcher → http://localhost:${PORT}`);
-  console.log(`Network IP  → http://${getLocalIP()}:${PORT}`);
-  console.log(`Remote URL  → http://${getLocalIP()}:${PORT}/remote.html`);
+  const localIP   = getLocalIP();
+  const tunnelUrl = (process.env.TUNNEL_URL || '').replace(/\/$/, '') || null;
+  console.log(`TV Launcher → http://localhost:${PORT}/tv.html`);
+  console.log(`Network     → http://${localIP}:${PORT}/remote.html`);
+  if (tunnelUrl) {
+    console.log(`Tunnel      → ${tunnelUrl}/remote.html`);
+  }
 });

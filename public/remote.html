@@ -286,18 +286,27 @@ html, body {
 
 <script>
 /* ── WebSocket ──────────────────────────── */
-const host    = window.location.hostname;
-const port    = window.location.port || '8765';
+// location.host includes ":port" for non-standard ports, bare hostname for 80/443
+// When served via Cloudflare Tunnel (https) → wss; local (http) → ws
+const wsProto = location.protocol === 'https:' ? 'wss:' : 'ws:';
+const wsHost  = location.host;
 let ws        = null;
 let retries   = 0;
+let pingTimer = null;
 const MAX_R   = 5;
 
 function connect() {
-  ws = new WebSocket(`ws://${host}:${port}?type=phone`);
+  ws = new WebSocket(`${wsProto}//${wsHost}?type=phone`);
 
   ws.onopen = () => {
     retries = 0;
     setConnected(true);
+    // Cloudflare Tunnel closes idle WebSockets after ~100 s; ping every 25 s
+    pingTimer = setInterval(() => {
+      if (ws && ws.readyState === WebSocket.OPEN) {
+        ws.send(JSON.stringify({ type: 'ping' }));
+      }
+    }, 25000);
   };
 
   ws.onmessage = (e) => {
@@ -305,6 +314,7 @@ function connect() {
   };
 
   ws.onclose = () => {
+    clearInterval(pingTimer);
     setConnected(false);
     if (retries < MAX_R) {
       retries++;

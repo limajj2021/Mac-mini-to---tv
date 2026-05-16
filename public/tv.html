@@ -432,15 +432,19 @@ document.querySelectorAll('.app-card').forEach((card, i) => {
 /* ── QR Code ────────────────────────────── */
 async function initQR() {
   try {
-    const { ip, port } = await fetch('/api/ip').then(r => r.json());
-    const url = `http://${ip}:${port}/remote.html`;
+    const { remoteUrl, tunnelUrl } = await fetch('/api/ip').then(r => r.json());
     new QRCode(document.getElementById('qrcode'), {
-      text: url,
+      text: remoteUrl,
       width: 96, height: 96,
       colorDark:  '#FFFFFF',
       colorLight: 'rgba(0,0,0,0)',
       correctLevel: QRCode.CorrectLevel.M,
     });
+    // When tunnel is active show domain so user can type it manually too
+    if (tunnelUrl) {
+      const domain = tunnelUrl.replace('https://', '');
+      document.querySelector('.qr-label').textContent = domain;
+    }
   } catch (_) {
     document.getElementById('qrPanel').innerHTML =
       '<div style="font-size:11px;color:rgba(255,255,255,0.3);">QR 碼不可用</div>';

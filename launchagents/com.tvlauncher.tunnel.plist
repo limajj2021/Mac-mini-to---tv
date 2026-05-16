@@ -1,0 +1,70 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<!DOCTYPE plist PUBLIC "-//Apple//DTD PLIST 1.0//EN"
+  "http://www.apple.com/DTDs/PropertyList-1.0.dtd">
+<!--
+  LaunchAgent for Cloudflare named tunnel (permanent domain, recommended for daily use).
+
+  Pre-requisites (run once in Terminal):
+    cloudflared tunnel login
+    cloudflared tunnel create tv-launcher
+    cloudflared tunnel route dns tv-launcher tv.YOURDOMAIN.com
+
+  Then create ~/.cloudflared/config.yml:
+    tunnel: <YOUR_TUNNEL_ID>
+    credentials-file: /Users/YOUR_USERNAME/.cloudflared/<YOUR_TUNNEL_ID>.json
+    ingress:
+      - hostname: tv.YOURDOMAIN.com
+        service: http://localhost:8765
+      - service: http_status:404
+
+  Installation:
+    cp com.tvlauncher.tunnel.plist ~/Library/LaunchAgents/
+    # Also update com.tvlauncher.server.plist to include TUNNEL_URL (see below)
+    launchctl load ~/Library/LaunchAgents/com.tvlauncher.tunnel.plist
+
+  Uninstall:
+    launchctl unload ~/Library/LaunchAgents/com.tvlauncher.tunnel.plist
+
+  Note: For quick tunnel (no account), use start-tunnel.sh instead.
+        Quick tunnel URLs change on every restart so are not suitable for LaunchAgent.
+-->
+<plist version="1.0">
+<dict>
+  <key>Label</key>
+  <string>com.tvlauncher.tunnel</string>
+
+  <key>ProgramArguments</key>
+  <array>
+    <!-- Use `which cloudflared` to confirm path, e.g. /opt/homebrew/bin/cloudflared -->
+    <string>/usr/local/bin/cloudflared</string>
+    <string>tunnel</string>
+    <string>--no-autoupdate</string>
+    <string>run</string>
+    <string>tv-launcher</string>
+  </array>
+
+  <key>RunAtLoad</key>
+  <true/>
+
+  <!-- Restart cloudflared if it crashes -->
+  <key>KeepAlive</key>
+  <true/>
+
+  <key>StandardOutPath</key>
+  <string>/tmp/tvlauncher-tunnel.log</string>
+
+  <key>StandardErrorPath</key>
+  <string>/tmp/tvlauncher-tunnel-error.log</string>
+</dict>
+</plist>
+
+<!--
+  Also update com.tvlauncher.server.plist to set TUNNEL_URL so the QR code
+  shows the public domain. Add this block inside the root <dict>:
+
+  <key>EnvironmentVariables</key>
+  <dict>
+    <key>TUNNEL_URL</key>
+    <string>https://tv.YOURDOMAIN.com</string>
+  </dict>
+-->
