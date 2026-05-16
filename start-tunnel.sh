@@ -128,15 +128,31 @@ if [ -z "$TUNNEL_URL" ]; then
   exit 0
 fi
 
+QUICK_TUNNEL_URL="$TUNNEL_URL"
+
+# ── DNS update: remap custom domain to new quick tunnel URL ──
+if [ -n "${CF_API_TOKEN:-}" ] && [ -n "${CF_ZONE_ID:-}" ] && [ -n "${CF_DOMAIN:-}" ]; then
+  echo "→  Updating DNS: $CF_DOMAIN → $(echo $TUNNEL_URL | sed 's|https://||')"
+  if QUICK_TUNNEL_URL="$QUICK_TUNNEL_URL" node "$SCRIPT_DIR/update-dns.js" 2>/dev/null; then
+    TUNNEL_URL="https://$CF_DOMAIN"
+    echo "✓  Custom domain active (DNS may take ~30 s to propagate)"
+  else
+    echo "⚠  DNS update failed — using tunnel URL directly"
+  fi
+fi
+
 echo ""
 echo "━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━"
 echo " Quick Tunnel active!"
 echo ""
-echo " Remote : $TUNNEL_URL/remote.html"
-echo " TV UI  : $TUNNEL_URL/tv.html  (local access only)"
-echo ""
-echo " Note: this URL changes every restart."
-echo " Run 'node cloudflare-setup.js' for a permanent URL."
+if [ "$TUNNEL_URL" != "$QUICK_TUNNEL_URL" ]; then
+  echo " Domain  : $TUNNEL_URL/remote.html  ← share this"
+  echo " Tunnel  : $QUICK_TUNNEL_URL/remote.html  (direct)"
+else
+  echo " Remote  : $TUNNEL_URL/remote.html"
+  echo " Note: URL changes on restart. Run 'node cloudflare-setup.js' to fix a domain."
+fi
+echo " TV UI   : http://localhost:8765/tv.html  (local)"
 echo "━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━"
 
 TUNNEL_URL="$TUNNEL_URL" node "$SCRIPT_DIR/server.js" &
