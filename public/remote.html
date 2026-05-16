@@ -1,0 +1,460 @@
+<!DOCTYPE html>
+<html lang="zh-TW">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0, user-scalable=no">
+<meta name="apple-mobile-web-app-capable" content="yes">
+<meta name="apple-mobile-web-app-status-bar-style" content="black-translucent">
+<title>TV Remote</title>
+<style>
+*, *::before, *::after {
+  margin: 0; padding: 0; box-sizing: border-box;
+  -webkit-tap-highlight-color: transparent;
+}
+
+:root {
+  --bg:       #1C1C1E;
+  --panel:    #2C2C2E;
+  --panel2:   #3A3A3C;
+  --border:   rgba(255,255,255,0.09);
+  --text:     #FFFFFF;
+  --text-dim: rgba(255,255,255,0.48);
+  --yt:       #FF0000;
+  --nf:       #E50914;
+  --sp:       #1ED760;
+  --green:    #30D158;
+}
+
+html, body {
+  width: 100%; height: 100%;
+  background: var(--bg);
+  color: var(--text);
+  font-family: -apple-system, BlinkMacSystemFont, 'SF Pro Text', 'Helvetica Neue', sans-serif;
+  overflow: hidden;
+}
+
+.container {
+  display: flex;
+  flex-direction: column;
+  height: 100vh;
+  height: 100dvh;
+  padding-bottom: env(safe-area-inset-bottom);
+}
+
+/* ── Header ─────────────────────────────── */
+.header {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  padding: calc(env(safe-area-inset-top) + 14px) 20px 14px;
+  border-bottom: 1px solid var(--border);
+  flex-shrink: 0;
+}
+
+.title {
+  font-size: 16px;
+  font-weight: 600;
+  letter-spacing: -0.2px;
+}
+
+.status {
+  display: flex;
+  align-items: center;
+  gap: 7px;
+  font-size: 13px;
+  color: var(--text-dim);
+}
+
+.status-dot {
+  width: 8px;
+  height: 8px;
+  border-radius: 50%;
+  background: #48484A;
+  flex-shrink: 0;
+  transition: background 0.35s, box-shadow 0.35s;
+}
+
+.status-dot.connected {
+  background: var(--green);
+  box-shadow: 0 0 7px var(--green);
+  animation: statusBlink 2.4s ease-in-out infinite;
+}
+
+@keyframes statusBlink {
+  0%, 100% { opacity: 1; }
+  50%       { opacity: 0.45; }
+}
+
+/* ── Touchpad ────────────────────────────── */
+.touchpad-wrap {
+  flex: 1;
+  padding: 12px 16px 8px;
+  min-height: 0;
+}
+
+.touchpad {
+  width: 100%;
+  height: 100%;
+  background: var(--panel);
+  border-radius: 18px;
+  position: relative;
+  overflow: hidden;
+  cursor: pointer;
+  touch-action: none;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  transition: background 0.15s;
+}
+
+.touchpad.pressing { background: #313133; }
+
+.touchpad-hint {
+  font-size: 13px;
+  color: rgba(255,255,255,0.18);
+  text-align: center;
+  line-height: 1.7;
+  pointer-events: none;
+  transition: opacity 0.3s;
+}
+
+.touchpad.has-activity .touchpad-hint { opacity: 0; }
+
+/* Swipe direction flash */
+.swipe-indicator {
+  position: absolute;
+  top: 50%;
+  left: 50%;
+  transform: translate(-50%, -50%);
+  font-size: 40px;
+  color: rgba(255,255,255,0.55);
+  opacity: 0;
+  pointer-events: none;
+  transition: none;
+}
+
+.swipe-indicator.flash {
+  animation: swipeFlash 0.3s ease-out forwards;
+}
+
+@keyframes swipeFlash {
+  0%   { opacity: 0.8; transform: translate(-50%, -50%) scale(1.2); }
+  100% { opacity: 0;   transform: translate(-50%, -50%) scale(0.9); }
+}
+
+/* Tap ripple */
+.ripple {
+  position: absolute;
+  border-radius: 50%;
+  background: rgba(255,255,255,0.18);
+  transform: scale(0);
+  pointer-events: none;
+  animation: ripple 0.42s ease-out forwards;
+}
+
+@keyframes ripple {
+  to { transform: scale(5); opacity: 0; }
+}
+
+/* ── Button row ──────────────────────────── */
+.btn-row {
+  display: flex;
+  gap: 10px;
+  padding: 0 16px;
+  flex-shrink: 0;
+}
+
+.btn {
+  flex: 1;
+  height: 54px;
+  background: var(--panel);
+  border: none;
+  border-radius: 14px;
+  color: var(--text);
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  gap: 3px;
+  cursor: pointer;
+  transition: transform 0.12s, background 0.12s;
+}
+
+.btn:active { transform: scale(0.91); background: var(--panel2); }
+
+.btn-icon { font-size: 22px; line-height: 1; }
+.btn-label { font-size: 10px; color: var(--text-dim); letter-spacing: 0.2px; }
+
+/* ── Quick launch ────────────────────────── */
+.quick-launch {
+  display: flex;
+  gap: 10px;
+  padding: 10px 16px 20px;
+  flex-shrink: 0;
+}
+
+.quick-btn {
+  flex: 1;
+  height: 46px;
+  border: none;
+  border-radius: 12px;
+  color: white;
+  font-size: 12px;
+  font-weight: 700;
+  letter-spacing: 0.3px;
+  cursor: pointer;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  gap: 5px;
+  transition: transform 0.12s, filter 0.12s;
+}
+
+.quick-btn:active { transform: scale(0.91); filter: brightness(0.82); }
+
+.quick-btn.yt { background: var(--yt); }
+.quick-btn.nf { background: var(--nf); }
+.quick-btn.sp { background: var(--sp); color: #000; }
+
+/* ── Launched toast ──────────────────────── */
+.toast {
+  position: fixed;
+  bottom: calc(env(safe-area-inset-bottom) + 100px);
+  left: 50%;
+  transform: translateX(-50%) translateY(20px);
+  background: rgba(44,44,46,0.95);
+  color: var(--text);
+  font-size: 13px;
+  padding: 9px 18px;
+  border-radius: 20px;
+  opacity: 0;
+  pointer-events: none;
+  transition: opacity 0.25s, transform 0.25s;
+  white-space: nowrap;
+  backdrop-filter: blur(16px);
+  border: 1px solid rgba(255,255,255,0.1);
+}
+
+.toast.show {
+  opacity: 1;
+  transform: translateX(-50%) translateY(0);
+}
+</style>
+</head>
+<body>
+<div class="container">
+
+  <div class="header">
+    <div class="title">TV Launcher</div>
+    <div class="status">
+      <div class="status-dot" id="statusDot"></div>
+      <span id="statusText">連線中⋯</span>
+    </div>
+  </div>
+
+  <div class="touchpad-wrap">
+    <div class="touchpad" id="touchpad">
+      <div class="touchpad-hint">滑動控制焦點<br>單點確認選取</div>
+      <div class="swipe-indicator" id="swipeInd"></div>
+    </div>
+  </div>
+
+  <div class="btn-row">
+    <button class="btn" id="btnBack">
+      <div class="btn-icon">←</div>
+      <div class="btn-label">返回</div>
+    </button>
+    <button class="btn" id="btnConfirm">
+      <div class="btn-icon">↵</div>
+      <div class="btn-label">確認</div>
+    </button>
+    <button class="btn" id="btnMenu">
+      <div class="btn-icon">☰</div>
+      <div class="btn-label">選單</div>
+    </button>
+  </div>
+
+  <div class="quick-launch">
+    <button class="quick-btn yt" data-app="youtube">▶ YouTube</button>
+    <button class="quick-btn nf" data-app="netflix">N Netflix</button>
+    <button class="quick-btn sp" data-app="spotify">♪ Spotify</button>
+  </div>
+
+</div>
+
+<div class="toast" id="toast"></div>
+
+<script>
+/* ── WebSocket ──────────────────────────── */
+const host    = window.location.hostname;
+const port    = window.location.port || '8765';
+let ws        = null;
+let retries   = 0;
+const MAX_R   = 5;
+
+function connect() {
+  ws = new WebSocket(`ws://${host}:${port}?type=phone`);
+
+  ws.onopen = () => {
+    retries = 0;
+    setConnected(true);
+  };
+
+  ws.onmessage = (e) => {
+    try { handleMsg(JSON.parse(e.data)); } catch (_) {}
+  };
+
+  ws.onclose = () => {
+    setConnected(false);
+    if (retries < MAX_R) {
+      retries++;
+      setTimeout(connect, 3000);
+    } else {
+      document.getElementById('statusText').textContent = '連線失敗，請重新掃描';
+    }
+  };
+
+  ws.onerror = () => {};
+}
+
+function setConnected(on) {
+  document.getElementById('statusDot').classList.toggle('connected', on);
+  document.getElementById('statusText').textContent = on ? '已連線' : '未連線';
+}
+
+function send(type, payload) {
+  if (ws && ws.readyState === WebSocket.OPEN) {
+    ws.send(JSON.stringify(payload ? { type, payload } : { type }));
+  }
+}
+
+function handleMsg(msg) {
+  if (msg.type === 'launched') {
+    const names = { youtube: 'YouTube', netflix: 'Netflix', spotify: 'Spotify' };
+    showToast(`正在開啟 ${names[msg.payload?.app] || msg.payload?.app}`);
+  }
+}
+
+/* ── Toast ──────────────────────────────── */
+let toastTimer = null;
+function showToast(text) {
+  const el = document.getElementById('toast');
+  el.textContent = text;
+  el.classList.add('show');
+  clearTimeout(toastTimer);
+  toastTimer = setTimeout(() => el.classList.remove('show'), 2200);
+}
+
+/* ── Touchpad ────────────────────────────── */
+const touchpad  = document.getElementById('touchpad');
+const swipeInd  = document.getElementById('swipeInd');
+const THRESHOLD = 30;
+const MOVE_GAP  = 180; // ms between focus moves
+
+let startX = 0, startY = 0;
+let swiped = false;
+let lastMove = 0;
+
+function flashSwipe(dir) {
+  swipeInd.textContent = dir > 0 ? '›' : '‹';
+  swipeInd.classList.remove('flash');
+  void swipeInd.offsetWidth; // reflow
+  swipeInd.classList.add('flash');
+  touchpad.classList.add('has-activity');
+}
+
+function tryMoveFocus(dir) {
+  const now = Date.now();
+  if (now - lastMove < MOVE_GAP) return;
+  lastMove = now;
+  send(dir > 0 ? 'focus_right' : 'focus_left');
+  flashSwipe(dir);
+}
+
+function createRipple(x, y) {
+  const rect = touchpad.getBoundingClientRect();
+  const r = document.createElement('div');
+  const size = 56;
+  r.className = 'ripple';
+  r.style.cssText = `width:${size}px;height:${size}px;left:${x-rect.left-size/2}px;top:${y-rect.top-size/2}px`;
+  touchpad.appendChild(r);
+  r.addEventListener('animationend', () => r.remove());
+}
+
+/* Touch */
+touchpad.addEventListener('touchstart', (e) => {
+  const t = e.touches[0];
+  startX = t.clientX; startY = t.clientY;
+  swiped = false;
+  touchpad.classList.add('pressing');
+}, { passive: true });
+
+touchpad.addEventListener('touchmove', (e) => {
+  e.preventDefault();
+  const t = e.touches[0];
+  const dx = t.clientX - startX;
+  const dy = t.clientY - startY;
+  if (Math.abs(dx) > THRESHOLD && Math.abs(dx) > Math.abs(dy)) {
+    swiped = true;
+    tryMoveFocus(dx);
+    startX = t.clientX;
+    startY = t.clientY;
+  }
+}, { passive: false });
+
+touchpad.addEventListener('touchend', (e) => {
+  touchpad.classList.remove('pressing');
+  touchpad.classList.remove('has-activity');
+  if (!swiped) {
+    const t = e.changedTouches[0];
+    createRipple(t.clientX, t.clientY);
+    send('select');
+  }
+}, { passive: true });
+
+/* Mouse (desktop testing) */
+let mouseDown = false, mouseSwiped = false, mStartX = 0;
+
+touchpad.addEventListener('mousedown', (e) => {
+  mouseDown = true; mouseSwiped = false; mStartX = e.clientX;
+  touchpad.classList.add('pressing');
+});
+
+window.addEventListener('mousemove', (e) => {
+  if (!mouseDown) return;
+  const dx = e.clientX - mStartX;
+  if (Math.abs(dx) > THRESHOLD) {
+    mouseSwiped = true;
+    tryMoveFocus(dx);
+    mStartX = e.clientX;
+  }
+});
+
+window.addEventListener('mouseup', (e) => {
+  if (!mouseDown) return;
+  touchpad.classList.remove('pressing');
+  touchpad.classList.remove('has-activity');
+  if (!mouseSwiped) {
+    createRipple(e.clientX, e.clientY);
+    send('select');
+  }
+  mouseDown = false;
+});
+
+/* ── Buttons ─────────────────────────────── */
+document.getElementById('btnBack').addEventListener('click',    () => send('back'));
+document.getElementById('btnConfirm').addEventListener('click', () => send('select'));
+document.getElementById('btnMenu').addEventListener('click',    () => send('menu'));
+
+document.querySelectorAll('.quick-btn').forEach((btn) => {
+  btn.addEventListener('click', () => {
+    const app = btn.dataset.app;
+    send('open_app', { app });
+  });
+});
+
+/* ── Init ───────────────────────────────── */
+connect();
+</script>
+</body>
+</html>

@@ -1,0 +1,53 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<!DOCTYPE plist PUBLIC "-//Apple//DTD PLIST 1.0//EN"
+  "http://www.apple.com/DTDs/PropertyList-1.0.dtd">
+<!--
+  Installation:
+    cp com.tvlauncher.chrome.plist ~/Library/LaunchAgents/
+    launchctl load ~/Library/LaunchAgents/com.tvlauncher.chrome.plist
+
+  Uninstall:
+    launchctl unload ~/Library/LaunchAgents/com.tvlauncher.chrome.plist
+
+  Notes:
+  - We use --start-fullscreen (not --kiosk) so that app windows can open
+    on top of the TV UI when launched from the remote.
+  - Add a short delay (via the StartInterval trick or a wrapper script) if
+    Chrome starts before the Node server is ready. The TV page auto-retries
+    the WebSocket connection every 3 s so a brief gap is fine.
+-->
+<plist version="1.0">
+<dict>
+  <key>Label</key>
+  <string>com.tvlauncher.chrome</string>
+
+  <key>ProgramArguments</key>
+  <array>
+    <string>/Applications/Google Chrome.app/Contents/MacOS/Google Chrome</string>
+    <!-- Open as a standalone app window with no browser UI chrome -->
+    <string>--app=http://localhost:8765/tv.html</string>
+    <!-- Start maximised / full-screen -->
+    <string>--start-fullscreen</string>
+    <!-- Suppress crash restore dialogs -->
+    <string>--noerrdialogs</string>
+    <string>--disable-infobars</string>
+    <!-- Prevent "Chrome didn't shut down correctly" banner -->
+    <string>--disable-session-crashed-bubble</string>
+    <!-- Required for WebSocket on localhost in some Chrome versions -->
+    <string>--allow-insecure-localhost</string>
+  </array>
+
+  <!-- Only launch once; Chrome manages its own life cycle -->
+  <key>RunAtLoad</key>
+  <true/>
+
+  <key>KeepAlive</key>
+  <false/>
+
+  <key>StandardOutPath</key>
+  <string>/tmp/tvlauncher-chrome.log</string>
+
+  <key>StandardErrorPath</key>
+  <string>/tmp/tvlauncher-chrome-error.log</string>
+</dict>
+</plist>

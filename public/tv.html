@@ -1,0 +1,511 @@
+<!DOCTYPE html>
+<html lang="zh-TW">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>TV Launcher</title>
+<style>
+*, *::before, *::after { margin: 0; padding: 0; box-sizing: border-box; }
+
+:root {
+  --bg: #1C1C1E;
+  --card-bg: rgba(255,255,255,0.07);
+  --card-border: rgba(255,255,255,0.10);
+  --text: #FFFFFF;
+  --text-dim: rgba(255,255,255,0.55);
+  --yt: #FF0000;
+  --nf: #E50914;
+  --sp: #1ED760;
+}
+
+html, body {
+  width: 100%; height: 100%;
+  background: var(--bg);
+  color: var(--text);
+  font-family: -apple-system, BlinkMacSystemFont, 'SF Pro Display', 'Helvetica Neue', Arial, sans-serif;
+  overflow: hidden;
+  user-select: none;
+}
+
+/* Ambient radial glow — changes with focus via JS */
+#ambient {
+  position: fixed;
+  inset: 0;
+  pointer-events: none;
+  transition: background 0.6s ease;
+  background: radial-gradient(ellipse 70% 50% at 50% 55%, rgba(255,255,255,0.02) 0%, transparent 70%);
+}
+
+body {
+  display: flex;
+  flex-direction: column;
+  height: 100vh;
+}
+
+/* ── Top bar ───────────────────────────────── */
+.topbar {
+  display: flex;
+  justify-content: space-between;
+  align-items: flex-start;
+  padding: 44px 72px 0;
+  flex-shrink: 0;
+}
+
+.clock {
+  font-size: 76px;
+  font-weight: 200;
+  letter-spacing: -4px;
+  line-height: 1;
+}
+
+.date-block {
+  text-align: right;
+  padding-top: 8px;
+}
+
+.date-text {
+  font-size: 20px;
+  color: var(--text-dim);
+  font-weight: 400;
+  margin-bottom: 4px;
+}
+
+.greeting {
+  font-size: 15px;
+  color: rgba(255,255,255,0.35);
+  font-weight: 400;
+}
+
+/* ── App grid ─────────────────────────────── */
+.apps {
+  flex: 1;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  gap: 36px;
+}
+
+.app-card {
+  width: 210px;
+  height: 170px;
+  background: var(--card-bg);
+  border: 1.5px solid var(--card-border);
+  border-radius: 22px;
+  backdrop-filter: blur(24px);
+  -webkit-backdrop-filter: blur(24px);
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  gap: 18px;
+  cursor: pointer;
+  transition:
+    transform 0.35s cubic-bezier(0.34, 1.56, 0.64, 1),
+    box-shadow 0.3s ease,
+    border-color 0.3s ease,
+    background 0.3s ease,
+    opacity 0.3s ease;
+  opacity: 0.6;
+}
+
+.app-card.focused {
+  transform: scale(1.08);
+  opacity: 1;
+  border-color: rgba(255,255,255,0.25);
+  background: rgba(255,255,255,0.10);
+}
+
+.app-card[data-app="youtube"].focused {
+  box-shadow:
+    0 0 0 2px var(--yt),
+    0 0 50px rgba(255,0,0,0.35),
+    0 24px 64px rgba(0,0,0,0.55);
+}
+.app-card[data-app="netflix"].focused {
+  box-shadow:
+    0 0 0 2px var(--nf),
+    0 0 50px rgba(229,9,20,0.35),
+    0 24px 64px rgba(0,0,0,0.55);
+}
+.app-card[data-app="spotify"].focused {
+  box-shadow:
+    0 0 0 2px var(--sp),
+    0 0 50px rgba(30,215,96,0.35),
+    0 24px 64px rgba(0,0,0,0.55);
+}
+
+.app-icon { line-height: 1; }
+
+.app-name {
+  font-size: 15px;
+  font-weight: 500;
+  color: rgba(255,255,255,0.5);
+  letter-spacing: 0.2px;
+  transition: color 0.2s;
+}
+
+.app-card.focused .app-name { color: var(--text); }
+
+/* ── Bottom bar ───────────────────────────── */
+.bottombar {
+  display: flex;
+  justify-content: space-between;
+  align-items: flex-end;
+  padding: 0 64px 44px;
+  flex-shrink: 0;
+}
+
+.hints {
+  display: flex;
+  gap: 20px;
+  font-size: 13px;
+  color: rgba(255,255,255,0.28);
+}
+
+.hint { display: flex; align-items: center; gap: 6px; }
+
+.hint kbd {
+  background: rgba(255,255,255,0.08);
+  border: 1px solid rgba(255,255,255,0.13);
+  border-radius: 6px;
+  padding: 2px 7px;
+  font-size: 12px;
+  font-family: inherit;
+}
+
+/* QR panel */
+.qr-panel {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 8px;
+}
+
+.qr-wrap {
+  padding: 8px;
+  background: rgba(255,255,255,0.06);
+  border: 1px solid rgba(255,255,255,0.10);
+  border-radius: 12px;
+}
+
+.qr-label {
+  font-size: 11px;
+  color: rgba(255,255,255,0.35);
+  text-align: center;
+  letter-spacing: 0.3px;
+}
+
+/* Connection indicator */
+.conn-dot {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  font-size: 13px;
+  color: rgba(255,255,255,0.45);
+}
+
+.dot {
+  width: 9px;
+  height: 9px;
+  border-radius: 50%;
+  background: #30D158;
+  box-shadow: 0 0 8px #30D158;
+  animation: blink 2.2s ease-in-out infinite;
+}
+
+@keyframes blink {
+  0%, 100% { opacity: 1; }
+  50%       { opacity: 0.45; }
+}
+
+/* ── Launch overlay ───────────────────────── */
+#launchOverlay {
+  position: fixed;
+  inset: 0;
+  background: #000;
+  opacity: 0;
+  pointer-events: none;
+  transition: opacity 0.45s ease;
+  z-index: 200;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  gap: 20px;
+}
+
+#launchOverlay.active {
+  opacity: 1;
+  pointer-events: all;
+}
+
+#launchAppIcon { font-size: 0; }
+
+#launchAppName {
+  font-size: 28px;
+  font-weight: 300;
+  color: rgba(255,255,255,0.75);
+  letter-spacing: 3px;
+  text-transform: uppercase;
+}
+
+/* ── App icon SVGs ────────────────────────── */
+.yt-icon, .nf-icon, .sp-icon {
+  display: block;
+}
+</style>
+</head>
+<body>
+
+<div id="ambient"></div>
+
+<!-- Top bar -->
+<div class="topbar">
+  <div class="clock" id="clock">--:--</div>
+  <div class="date-block">
+    <div class="date-text" id="dateText">載入中</div>
+    <div class="greeting" id="greeting"></div>
+  </div>
+</div>
+
+<!-- App cards -->
+<div class="apps" id="apps">
+
+  <div class="app-card focused" data-app="youtube">
+    <div class="app-icon">
+      <svg class="yt-icon" width="62" height="44" viewBox="0 0 90 64">
+        <rect width="90" height="64" rx="13" fill="#FF0000"/>
+        <path d="M37 15 L37 49 L64 32 Z" fill="white"/>
+      </svg>
+    </div>
+    <div class="app-name">YouTube</div>
+  </div>
+
+  <div class="app-card" data-app="netflix">
+    <div class="app-icon">
+      <svg class="nf-icon" width="38" height="56" viewBox="0 0 38 56">
+        <path d="M0 0 L12 0 L12 34.4 L26 0 L38 0 L38 56 L26 56 L26 21.6 L12 56 L0 56 Z" fill="#E50914"/>
+      </svg>
+    </div>
+    <div class="app-name">Netflix</div>
+  </div>
+
+  <div class="app-card" data-app="spotify">
+    <div class="app-icon">
+      <svg class="sp-icon" width="54" height="54" viewBox="0 0 54 54">
+        <circle cx="27" cy="27" r="27" fill="#1ED760"/>
+        <path d="M12 21 Q27 14 42 20" stroke="#000" stroke-width="3.8" fill="none" stroke-linecap="round"/>
+        <path d="M14 29 Q27 23 40 27" stroke="#000" stroke-width="3.2" fill="none" stroke-linecap="round"/>
+        <path d="M17 37 Q27 32 37 35" stroke="#000" stroke-width="2.6" fill="none" stroke-linecap="round"/>
+      </svg>
+    </div>
+    <div class="app-name">Spotify</div>
+  </div>
+
+</div>
+
+<!-- Bottom bar -->
+<div class="bottombar">
+  <div class="hints">
+    <div class="hint"><kbd>←</kbd><kbd>→</kbd>&nbsp;切換</div>
+    <div class="hint"><kbd>↵</kbd>&nbsp;開啟</div>
+    <div class="hint"><kbd>Esc</kbd>&nbsp;返回</div>
+  </div>
+
+  <div class="qr-panel" id="qrPanel">
+    <div class="qr-wrap"><div id="qrcode"></div></div>
+    <div class="qr-label">掃描配對遙控器</div>
+  </div>
+
+  <div class="conn-dot" id="connDot" style="display:none;">
+    <div class="dot"></div>
+    <span>遙控器已連線</span>
+  </div>
+</div>
+
+<!-- Launch overlay -->
+<div id="launchOverlay">
+  <div id="launchAppIcon"></div>
+  <div id="launchAppName"></div>
+</div>
+
+<script src="https://cdnjs.cloudflare.com/ajax/libs/qrcodejs/1.0.0/qrcode.min.js"></script>
+<script>
+/* ── Constants ──────────────────────────── */
+const APPS = ['youtube', 'netflix', 'spotify'];
+
+const BRAND = {
+  youtube: { color: '255,0,0',   label: 'YouTube' },
+  netflix: { color: '229,9,20',  label: 'Netflix'  },
+  spotify: { color: '30,215,96', label: 'Spotify'  },
+};
+
+/* ── State ──────────────────────────────── */
+let focusedIndex = 0;
+let ws = null;
+let launching = false;
+
+/* ── Clock ──────────────────────────────── */
+const DAYS    = ['週日','週一','週二','週三','週四','週五','週六'];
+const MONTHS  = ['1','2','3','4','5','6','7','8','9','10','11','12'];
+
+function updateClock() {
+  const now = new Date();
+  const h = String(now.getHours()).padStart(2, '0');
+  const m = String(now.getMinutes()).padStart(2, '0');
+  document.getElementById('clock').textContent = `${h}:${m}`;
+  document.getElementById('dateText').textContent =
+    `${DAYS[now.getDay()]}，${MONTHS[now.getMonth()]} 月 ${now.getDate()} 日`;
+
+  const hr = now.getHours();
+  let g = '你好';
+  if (hr >= 5  && hr < 12) g = '早安';
+  else if (hr >= 12 && hr < 14) g = '午安';
+  else if (hr >= 14 && hr < 18) g = '下午好';
+  else if (hr >= 18 && hr < 22) g = '晚上好';
+  else g = '晚安';
+  document.getElementById('greeting').textContent = g;
+}
+setInterval(updateClock, 1000);
+updateClock();
+
+/* ── Focus ──────────────────────────────── */
+function setFocus(index) {
+  focusedIndex = Math.max(0, Math.min(APPS.length - 1, index));
+  document.querySelectorAll('.app-card').forEach((card, i) => {
+    card.classList.toggle('focused', i === focusedIndex);
+  });
+  updateAmbient(APPS[focusedIndex]);
+  reportState();
+}
+
+function moveFocus(dir) {
+  setFocus(focusedIndex + dir);
+}
+
+function updateAmbient(app) {
+  const c = BRAND[app]?.color || '255,255,255';
+  document.getElementById('ambient').style.background =
+    `radial-gradient(ellipse 65% 45% at 50% 55%, rgba(${c},0.08) 0%, transparent 68%)`;
+}
+
+/* ── Select / Open ──────────────────────── */
+function handleSelect() {
+  if (launching) return;
+  openApp(APPS[focusedIndex]);
+}
+
+function openApp(appName) {
+  if (launching) return;
+  launching = true;
+
+  const info = BRAND[appName];
+  document.getElementById('launchAppName').textContent = info?.label || appName;
+  document.getElementById('launchOverlay').classList.add('active');
+
+  setTimeout(() => {
+    document.getElementById('launchOverlay').classList.remove('active');
+    launching = false;
+  }, 1800);
+}
+
+function resetUI() {
+  document.getElementById('launchOverlay').classList.remove('active');
+  launching = false;
+}
+
+/* ── Keyboard ───────────────────────────── */
+document.addEventListener('keydown', (e) => {
+  switch (e.key) {
+    case 'ArrowLeft':  moveFocus(-1); break;
+    case 'ArrowRight': moveFocus(1);  break;
+    case 'Enter':      handleSelect(); break;
+    case 'Escape':     resetUI();     break;
+  }
+});
+
+/* ── Click cards ────────────────────────── */
+document.querySelectorAll('.app-card').forEach((card, i) => {
+  card.addEventListener('click', () => { setFocus(i); handleSelect(); });
+});
+
+/* ── QR Code ────────────────────────────── */
+async function initQR() {
+  try {
+    const { ip, port } = await fetch('/api/ip').then(r => r.json());
+    const url = `http://${ip}:${port}/remote.html`;
+    new QRCode(document.getElementById('qrcode'), {
+      text: url,
+      width: 96, height: 96,
+      colorDark:  '#FFFFFF',
+      colorLight: 'rgba(0,0,0,0)',
+      correctLevel: QRCode.CorrectLevel.M,
+    });
+  } catch (_) {
+    document.getElementById('qrPanel').innerHTML =
+      '<div style="font-size:11px;color:rgba(255,255,255,0.3);">QR 碼不可用</div>';
+  }
+}
+
+/* ── Connection UI ──────────────────────── */
+function setConnectionUI(connected) {
+  document.getElementById('qrPanel').style.display  = connected ? 'none'  : 'flex';
+  document.getElementById('connDot').style.display  = connected ? 'flex'  : 'none';
+}
+
+/* ── Report focus to server ─────────────── */
+function reportState() {
+  if (ws && ws.readyState === WebSocket.OPEN) {
+    ws.send(JSON.stringify({ type: 'state', payload: { focused: APPS[focusedIndex] } }));
+  }
+}
+
+/* ── WebSocket ──────────────────────────── */
+function connect() {
+  ws = new WebSocket(`ws://localhost:8765?type=tv`);
+
+  ws.onopen = () => {
+    reportState();
+  };
+
+  ws.onmessage = (e) => {
+    try { handleMsg(JSON.parse(e.data)); } catch (_) {}
+  };
+
+  ws.onclose = () => setTimeout(connect, 3000);
+  ws.onerror = () => {};
+}
+
+function handleMsg(msg) {
+  switch (msg.type) {
+    case 'focus_left':  moveFocus(-1); break;
+    case 'focus_right': moveFocus(1);  break;
+    case 'select':      handleSelect(); break;
+    case 'back':        resetUI();     break;
+
+    case 'open_app': {
+      const app = msg.payload?.app;
+      if (app) {
+        const idx = APPS.indexOf(app);
+        if (idx !== -1) setFocus(idx);
+        openApp(app);
+      }
+      break;
+    }
+
+    case 'state': {
+      if (typeof msg.payload?.connected === 'boolean') {
+        setConnectionUI(msg.payload.connected);
+      }
+      break;
+    }
+  }
+}
+
+/* ── Init ───────────────────────────────── */
+updateAmbient('youtube');
+initQR();
+connect();
+</script>
+</body>
+</html>

@@ -1,0 +1,44 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<!DOCTYPE plist PUBLIC "-//Apple//DTD PLIST 1.0//EN"
+  "http://www.apple.com/DTDs/PropertyList-1.0.dtd">
+<!--
+  Installation:
+    cp com.tvlauncher.server.plist ~/Library/LaunchAgents/
+    launchctl load ~/Library/LaunchAgents/com.tvlauncher.server.plist
+
+  Uninstall:
+    launchctl unload ~/Library/LaunchAgents/com.tvlauncher.server.plist
+
+  Replace /Users/YOUR_USERNAME with your actual home directory.
+  Run `echo $HOME` to find it.
+-->
+<plist version="1.0">
+<dict>
+  <key>Label</key>
+  <string>com.tvlauncher.server</string>
+
+  <key>ProgramArguments</key>
+  <array>
+    <!-- Use `which node` to confirm your node path, e.g. /usr/local/bin/node or /opt/homebrew/bin/node -->
+    <string>/usr/local/bin/node</string>
+    <string>/Users/YOUR_USERNAME/tv-launcher/server.js</string>
+  </array>
+
+  <key>WorkingDirectory</key>
+  <string>/Users/YOUR_USERNAME/tv-launcher</string>
+
+  <!-- Start automatically at login -->
+  <key>RunAtLoad</key>
+  <true/>
+
+  <!-- Restart automatically if the process crashes -->
+  <key>KeepAlive</key>
+  <true/>
+
+  <key>StandardOutPath</key>
+  <string>/tmp/tvlauncher-server.log</string>
+
+  <key>StandardErrorPath</key>
+  <string>/tmp/tvlauncher-server-error.log</string>
+</dict>
+</plist>
