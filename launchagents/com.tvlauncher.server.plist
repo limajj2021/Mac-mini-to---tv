@@ -35,6 +35,21 @@
   <key>KeepAlive</key>
   <true/>
 
+  <!--
+    Optional: set TUNNEL_URL so the TV QR code shows your public domain.
+    Required when using named Cloudflare Tunnel (after running cloudflare-setup.js).
+    Replace https://tv.YOURDOMAIN.com with your actual domain.
+
+    Also set TUNNEL_TOKEN here if you want the server LaunchAgent to start cloudflared
+    automatically (alternatively, use com.tvlauncher.tunnel.plist for cloudflared).
+
+  <key>EnvironmentVariables</key>
+  <dict>
+    <key>TUNNEL_URL</key>
+    <string>https://tv.YOURDOMAIN.com</string>
+  </dict>
+  -->
+
   <key>StandardOutPath</key>
   <string>/tmp/tvlauncher-server.log</string>
 
